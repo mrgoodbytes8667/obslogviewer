@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>OBS Log</title>
+    <link rel="stylesheet" href="build/vendors~app.css">
+    <link rel="stylesheet" href="build/app.css">
+</head>
+
+<body class="bg-dark">
+<div class="fixed-bottom">
+    <nav class="navbar navbar-dark bg-dark">
+        <button id="reload" class="btn btn-primary" title="Reload">
+            <span class="fas fa-redo" aria-hidden="true"></span>
+        </button>
+    </nav>
+</div>
+
+<ul class="list-group list-group-flush"></ul>
+
+<script src="build/runtime.js"></script>
+<script src="build/vendors~app.js"></script>
+<script src="build/app.js"></script>
+
+<script type="text/javascript" src="build/obs-websocket.js"></script>
+<script type="text/javascript" src="build/connection.js"></script>
+<script type="text/javascript">
+
+    let ready = false;
+    const readyText = '8237b93aaf2b5215d0b8475b780bab07';
+
+    // Do stuff if the document is fully loaded
+    document.addEventListener("DOMContentLoaded", function () {
+        const kcConn = new Connection(
+            'localhost:4444', 'YOUR_PASSWORD'
+        );
+
+        kcConn.on('connected', function () {
+            setTimeout(connected, 5000, kcConn);
+        });
+
+        kcConn.on('error', function (err) {
+            console.error(err)
+        });
+
+        kcConn.on('OBSLogWidgetListener', function (data) {
+            console.log(data);
+            var now = new Intl.DateTimeFormat('default', {
+                hour: 'numeric',
+                minute: 'numeric',
+                second: 'numeric'
+            }).format(new Date());
+            if (data === readyText && !ready) {
+                $('ul').prepend(`<div id="connected" class="alert alert-success alert-dismissible fade show" role="alert">
+                        <span class="fas fa-thumbs-up" aria-hidden="true"></span> Connected!
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>`);
+                ready = true;
+                setTimeout(hideConnected, 5000);
+            } else {
+                $('ul').append(`<li class="list-group-item list-group-item-action">
+        <div class="row">
+            <div class="col-md-1 col-sm-3">
+                <small class="text-info">${now}</small>
+            </div>
+            <div class="col-md-11 col-sm-9">
+                <span>${data}</span>
+                <button type="button" class="close" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        </div>
+    </li>`);
+            }
+        });
+
+        $("ul").on("click", ".close", function () {
+            let logText = $(this).siblings('span').text();
+            console.log(logText);
+            kcConn.send('OBSLogWidgetRemoved', logText);
+            $(this).parents('li').remove();
+        });
+        $("#reload").click(function () {
+            location.reload();
+        });
+    });
+
+    function connected(kcConn) {
+        kcConn.send('OBSLogWidgetListener', readyText);
+    }
+
+    function hideConnected() {
+        $('#connected').alert('close');
+    }
+</script>
+
+</body>
+</html>
